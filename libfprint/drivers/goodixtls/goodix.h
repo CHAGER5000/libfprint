@@ -275,6 +275,24 @@ void goodix_send_mcu_get_image (FpDevice           *dev,
                                 gpointer            user_data);
 
 /**
+ * @brief Like goodix_send_mcu_get_image(), but with a caller supplied
+ * mcu_get_image payload, for devices whose request carries capture
+ * parameters instead of a bare flag (e.g. 52xd: 10 bytes). Checkout
+ * goodix_tls_read_image_payload() if you want an image from the device.
+ *
+ * @param dev
+ * @param payload encoded immediately, the caller keeps ownership
+ * @param length
+ * @param callback
+ * @param user_data
+ */
+void goodix_send_mcu_get_image_payload (FpDevice           *dev,
+                                        const guint8       *payload,
+                                        guint16             length,
+                                        GoodixImageCallback callback,
+                                        gpointer            user_data);
+
+/**
  * @brief Tell the device we want to wait for the user to present their finger
  *
  * @param dev
@@ -460,6 +478,24 @@ void goodix_send_preset_psk_write (FpDevice             *dev,
                                    gpointer              user_data);
 
 /**
+ * @brief Like goodix_send_preset_psk_read(), but with the (length, offset,
+ * flags, 0) request some firmwares require (e.g. 52xd rejects the short one)
+ *
+ * @param dev
+ * @param flags
+ * @param length
+ * @param offset
+ * @param callback
+ * @param user_data
+ */
+void goodix_send_preset_psk_read_offset (FpDevice                   *dev,
+                                         guint32                     flags,
+                                         guint32                     length,
+                                         guint32                     offset,
+                                         GoodixPresetPskReadCallback callback,
+                                         gpointer                    user_data);
+
+/**
  * @brief Ask the device what preset psk it has
  *
  * @param dev
@@ -566,5 +602,21 @@ gboolean goodix_shutdown_tls (FpDevice *dev,
 void goodix_tls_read_image (FpDevice           *dev,
                             GoodixImageCallback callback,
                             gpointer            user_data);
+
+/**
+ * @brief Like goodix_tls_read_image(), but using
+ * goodix_send_mcu_get_image_payload() to request the frame.
+ *
+ * @param dev
+ * @param payload
+ * @param length
+ * @param callback Called when the image is decrypted
+ * @param user_data
+ */
+void goodix_tls_read_image_payload (FpDevice           *dev,
+                                    const guint8       *payload,
+                                    guint16             length,
+                                    GoodixImageCallback callback,
+                                    gpointer            user_data);
 
 // ---- TLS SECTION END ----

@@ -63,6 +63,7 @@ typedef struct
 typedef FpImage *(*GoodixTls5xxProcessFrameFn)(guint8 * pix);
 typedef GoodixTls5xxMcuConfig (*GoodixTls5xxGetMcuFn)(void);
 typedef void (*GoodixTls5xxResetStateFn)(FpDevice *);
+typedef void (*GoodixTls5xxScanStartFn)(FpDevice *);
 
 struct _FpiDeviceGoodixTls5xxClass
 {
@@ -71,6 +72,9 @@ struct _FpiDeviceGoodixTls5xxClass
   GoodixTls5xxGetMcuFn       get_mcu_cfg; ///< provide the mcu config before fdt commands
   GoodixTls5xxProcessFrameFn process_frame; ///< process a frame after it is decoded (e.g. crop it)
   GoodixTls5xxResetStateFn   reset_state; ///< callback to reset the state, may be NULL
+  /// start the device's own scan instead of the default fdt based one (for
+  /// devices whose fdt events or calibration commands differ), may be NULL
+  GoodixTls5xxScanStartFn    scan_start;
 
   guint16                    scan_width; ///< width of the raw scanner image
   guint16                    scan_height; ///< height of the raw scanner image

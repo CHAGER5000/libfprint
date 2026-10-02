@@ -398,6 +398,7 @@ goodix_receive_pack (FpDevice *dev, guint8 *data, guint32 length)
       break;
 
     case GOODIX_FLAGS_TLS:
+    case GOODIX_FLAGS_TLS_DATA:
       fp_dbg ("Got TLS msg");
       goodix_receive_done (dev, payload, payload_len, NULL);
 
@@ -639,6 +640,31 @@ goodix_send_mcu_get_image (FpDevice *dev, GoodixImageCallback callback,
   goodix_send_protocol (dev, GOODIX_CMD_MCU_GET_IMAGE, (guint8 *) &payload,
                         sizeof (payload), NULL, TRUE, GOODIX_TIMEOUT, TRUE,
                         NULL, NULL);
+}
+
+void
+goodix_send_mcu_get_image_payload (FpDevice *dev, const guint8 *payload,
+                                   guint16 length,
+                                   GoodixImageCallback callback,
+                                   gpointer user_data)
+{
+  GoodixCallbackInfo *cb_info;
+
+  if (callback)
+    {
+      cb_info = malloc (sizeof (GoodixCallbackInfo));
+
+      cb_info->callback = G_CALLBACK (callback);
+      cb_info->user_data = user_data;
+
+      goodix_send_protocol (dev, GOODIX_CMD_MCU_GET_IMAGE, payload, length,
+                            NULL, TRUE, GOODIX_TIMEOUT, TRUE,
+                            goodix_receive_default, cb_info);
+      return;
+    }
+
+  goodix_send_protocol (dev, GOODIX_CMD_MCU_GET_IMAGE, payload, length, NULL,
+                        TRUE, GOODIX_TIMEOUT, TRUE, NULL, NULL);
 }
 
 void
@@ -1119,6 +1145,34 @@ goodix_send_preset_psk_write (FpDevice *dev, guint32 flags, guint8 *psk,
 }
 
 void
+goodix_send_preset_psk_read_offset (FpDevice *dev, guint32 flags,
+                                    guint32 length, guint32 offset,
+                                    GoodixPresetPskReadCallback callback,
+                                    gpointer user_data)
+{
+  guint32 payload[4] = {GUINT32_TO_LE (length), GUINT32_TO_LE (offset),
+                        GUINT32_TO_LE (flags), 0};
+  GoodixCallbackInfo *cb_info;
+
+  if (callback)
+    {
+      cb_info = malloc (sizeof (GoodixCallbackInfo));
+
+      cb_info->callback = G_CALLBACK (callback);
+      cb_info->user_data = user_data;
+
+      goodix_send_protocol (dev, GOODIX_CMD_PRESET_PSK_READ, (guint8 *) payload,
+                            sizeof (payload), NULL, TRUE, GOODIX_TIMEOUT, TRUE,
+                            goodix_receive_preset_psk_read, cb_info);
+      return;
+    }
+
+  goodix_send_protocol (dev, GOODIX_CMD_PRESET_PSK_READ, (guint8 *) payload,
+                        sizeof (payload), NULL, TRUE, GOODIX_TIMEOUT, TRUE,
+                        NULL, NULL);
+}
+
+void
 goodix_send_preset_psk_read (FpDevice *dev, guint32 flags, guint16 length,
                              GoodixPresetPskReadCallback callback,
                              gpointer user_data)
@@ -1457,6 +1511,14 @@ goodix_tls_ready_image_handler (FpDevice *dev, guint8 *data,
   FpiDeviceGoodixTlsPrivate *priv =
     fpi_device_goodixtls_get_instance_private (self);
 
+  // Some devices (e.g. 52xd) send the image as a TLS data pack (0xb2), with
+  // a 9 byte header before the TLS record (from PR #42)
+  if (length > 9 && data[0] == 0x00 && data[1] == GOODIX_CMD_MCU_GET_IMAGE)
+    {
+      data += 9;
+      length -= 9;
+    }
+
   goodix_tls_client_write (priv->tls_hop, data, length);
 
   const guint16 size = -1;
@@ -1487,6 +1549,21 @@ goodix_tls_read_image (FpDevice *dev, GoodixImageCallback callback,
   cb_info->user_data = user_data;
 
   goodix_send_mcu_get_image (dev, goodix_tls_ready_image_handler, cb_info);
+}
+
+void
+goodix_tls_read_image_payload (FpDevice *dev, const guint8 *payload,
+                               guint16 length, GoodixImageCallback callback,
+                               gpointer user_data)
+{
+  g_assert (callback);
+  GoodixCallbackInfo *cb_info = malloc (sizeof (GoodixCallbackInfo));
+
+  cb_info->callback = G_CALLBACK (callback);
+  cb_info->user_data = user_data;
+
+  goodix_send_mcu_get_image_payload (dev, payload, length,
+                                     goodix_tls_ready_image_handler, cb_info);
 }
 
 // ---- TLS SECTION END ----

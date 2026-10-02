@@ -476,7 +476,14 @@ goodixtls5xx_save_image_to_pgm (FpImage *img, const char *path)
 static void
 dev_change_state (FpImageDevice * img_dev, FpiImageDeviceState state)
 {
-  if (state == FPI_IMAGE_DEVICE_STATE_AWAIT_FINGER_ON)
+  FpiDeviceGoodixTls5xxClass *cls = FPI_DEVICE_GOODIXTLS5XX_GET_CLASS (img_dev);
+
+  if (state != FPI_IMAGE_DEVICE_STATE_AWAIT_FINGER_ON)
+    return;
+
+  if (cls->scan_start)
+    cls->scan_start (FP_DEVICE (img_dev));
+  else
     goodixtls5xx_scan_start (FPI_DEVICE_GOODIXTLS5XX (img_dev));
 }
 static void
@@ -554,6 +561,7 @@ fpi_device_goodixtls5xx_class_init (FpiDeviceGoodixTls5xxClass * self)
   self->scan_height = 0;
   self->scan_width = 0;
   self->reset_state = NULL;
+  self->scan_start = NULL;
 
   FpImageDeviceClass *img_cls = FP_IMAGE_DEVICE_CLASS (self);
 
