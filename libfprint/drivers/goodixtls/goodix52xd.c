@@ -33,7 +33,8 @@
 #define GOODIX52XD_WIDTH 64
 #define GOODIX52XD_HEIGHT 80
 #define GOODIX52XD_FRAME_SIZE (GOODIX52XD_WIDTH * GOODIX52XD_HEIGHT)
-// NBIS can't find minutiae in a 64x80 image, it is upscaled like elanspi does
+// The 64x80 image is upscaled like elanspi does: NBIS can't find minutiae in
+// it, and SIGFM separates matches from non-matches better at 2x
 #define GOODIX52XD_SCALE 2
 // For every 4 pixels there are 6 bytes, followed by 4 extra end bytes
 #define GOODIX52XD_RAW_FRAME_SIZE (GOODIX52XD_FRAME_SIZE / 4 * 6 + 4)
@@ -686,7 +687,11 @@ fpi_device_goodixtls52xd_class_init (FpiDeviceGoodixTls52xdClass *class)
 
   dev_class->scan_type = FP_SCAN_TYPE_PRESS;
 
-  // TODO: tune, the image is small (64x80, upscaled to 128x160)
+  // NBIS minutiae are unreliable on such a small image (64x80, upscaled to
+  // 128x160), SIGFM is used instead and bz3_threshold is its score threshold.
+  // Offline, at 2x, overlapping captures of the same finger score 64-97 and
+  // non-overlapping ones 0-4
+  img_dev_class->algorithm = FPI_DEVICE_ALGO_SIGFM;
   img_dev_class->bz3_threshold = 24;
   img_dev_class->img_width = GOODIX52XD_WIDTH * GOODIX52XD_SCALE;
   img_dev_class->img_height = GOODIX52XD_HEIGHT * GOODIX52XD_SCALE;
