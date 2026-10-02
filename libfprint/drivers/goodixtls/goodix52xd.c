@@ -687,6 +687,11 @@ fpi_device_goodixtls52xd_class_init (FpiDeviceGoodixTls52xdClass *class)
 
   dev_class->scan_type = FP_SCAN_TYPE_PRESS;
 
+  // The temperature model's 180s default aborts the enrollment before its 20
+  // small partial presses are done, disabled like goodixmoc, elanmoc, fpcmoc
+  // and synaptics do (from PR #39)
+  dev_class->temp_hot_seconds = -1;
+
   // NBIS minutiae are unreliable on such a small image (64x80, upscaled to
   // 128x160), SIGFM is used instead and bz3_threshold is its score threshold.
   // Offline, at 2x, overlapping captures of the same finger score 64-97 and
